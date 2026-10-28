@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Chunk Studio</title>
+<meta name="description" content="Тренажёр американских фраз B2–C1: 5–7 новых чанков в день, произношение и интервальное повторение.">
+<meta name="theme-color" content="#0E6B67">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chunk Studio">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,750&family=JetBrains+Mono:wght@500&family=Source+Sans+3:wght@400;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<script src="firebase-config.js"></script>
+<style>
+/* Layout: single mobile column (max 560px), sticky top bar, fixed bottom tabs; the yellow highlighter marks every chunk */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --ink:#141B24; --muted:#5B6676; --line:#D5DBE3;
+  --accent:#0E6B67; --accent-ink:#FFFFFF; --soft:#E1EDEC;
+  --hl:#FFD34D; --hl-ink:#141B24;
+  --good:#1E8A4C; --good-ink:#FFFFFF; --warn:#A86A12; --bad:#C2413A;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --f-sentence:"Source Serif 4", Georgia, "Times New Roman", serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10151B; --surface:#1A212A; --ink:#E8EDF2; --muted:#93A0AE; --line:#2A3440;
+  --accent:#3FB8B0; --accent-ink:#08201F; --soft:#173230;
+  --hl:#E5B92E; --hl-ink:#141B24; --good:#4CC37E; --good-ink:#0B2416; --warn:#E0A84A; --bad:#EF6B62; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10151B; --surface:#1A212A; --ink:#E8EDF2; --muted:#93A0AE; --line:#2A3440;
+  --accent:#3FB8B0; --accent-ink:#08201F; --soft:#173230;
+  --hl:#E5B92E; --hl-ink:#141B24; --good:#4CC37E; --good-ink:#0B2416; --warn:#E0A84A; --bad:#EF6B62; color-scheme:dark}
+
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+html,body{height:100%}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 calc(96px + env(safe-area-inset-bottom,0px))}
+header.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:14px 10px}
+.brand{font-family:var(--f-display);font-weight:750;font-size:20px;letter-spacing:-.01em;display:flex;align-items:center;gap:8px}
+.brand .dot{background:var(--hl);color:var(--hl-ink);padding:0 6px;border-radius:4px}
+.who{font-size:13px;color:var(--muted);text-align:right;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:28px;line-height:1.15;font-weight:750}
+h2{font-size:20px;font-weight:700}
+.eyebrow{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:600}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+mark{background:var(--hl);color:var(--hl-ink);padding:0 3px;border-radius:3px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.sentence{font-family:var(--f-sentence);font-size:19px;line-height:1.5}
+.stress{font-family:var(--f-mono);font-size:13px;background:var(--soft);color:var(--ink);padding:6px 10px;border-radius:8px;display:inline-block}
+.btn{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px/1 var(--f-body);padding:12px 16px;border-radius:12px;cursor:pointer;min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.ghost{background:transparent}
+.btn.block{width:100%}
+.btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--hl);outline-offset:2px}
+.btn:disabled{opacity:.5;cursor:default}
+.icon{width:18px;height:18px;flex:none}
+input[type=text],textarea,select{width:100%;font:400 17px/1.4 var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+textarea{min-height:88px;resize:vertical}
+.pill{display:inline-flex;align-items:center;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.pill.biz{color:var(--accent);border-color:currentColor}
+.pill.new{color:var(--muted)}
+.pill.learn{color:var(--warn);border-color:currentColor}
+.pill.done{color:var(--good);border-color:currentColor}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px}
+.stat b{display:block;font-family:var(--f-display);font-size:26px;line-height:1.1;font-variant-numeric:tabular-nums}
+.stat span{font-size:12px;color:var(--muted)}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.dots{display:grid;grid-template-columns:repeat(14,1fr);gap:4px}
+.dots i{aspect-ratio:1;border-radius:4px;background:var(--line);max-width:100%}
+.dots i.on{background:var(--accent)}
+.dots i.today{outline:2px solid var(--hl);outline-offset:1px}
+.today-hero{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;display:flex;flex-direction:column;gap:14px}
+.today-hero .big{font-family:var(--f-display);font-size:40px;font-weight:750;line-height:1;font-variant-numeric:tabular-nums}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:6;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px);padding-left:env(safe-area-inset-left,0px);padding-right:env(safe-area-inset-right,0px)}
+.tabs nav{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr)}
+.tabs button{appearance:none;background:none;border:0;color:var(--muted);font:600 12px/1.2 var(--f-body);padding:10px 4px 12px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-height:56px}
+.tabs button[aria-current="page"]{color:var(--accent)}
+.tabs svg{width:22px;height:22px}
+.list{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);overflow:hidden}
+.item{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line);cursor:pointer;text-align:left;background:none;border-left:0;border-right:0;border-top:0;color:inherit;font:inherit;width:100%}
+.item:last-child{border-bottom:0}
+.item .t{min-width:0}
+.item .en{font-weight:700}
+.item .ru{font-size:14px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:2px}
+.chip{appearance:none;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 12px;font:600 13px/1 var(--f-body);white-space:nowrap;cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.seg button{appearance:none;border:0;border-right:1px solid var(--line);background:var(--surface);color:var(--ink);font:600 15px/1 var(--f-body);padding:12px 6px;cursor:pointer;font-variant-numeric:tabular-nums}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.progress{display:flex;align-items:center;gap:10px}
+.progress .bar{flex:1}
+.ex-list{display:flex;flex-direction:column;gap:10px;margin:0;padding:0;list-style:none}
+.ex-list li{display:flex;gap:10px;align-items:flex-start}
+.ex-list .ex-body{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.ex-list .sentence{font-size:17px}
+.tr{font-size:14px;line-height:1.4;color:var(--muted)}
+.play{appearance:none;position:relative;border:1px solid var(--line);background:var(--surface);color:var(--accent);border-radius:999px;width:36px;height:36px;display:inline-grid;place-items:center;cursor:pointer;flex:none;transition:background-color .2s,border-color .2s,color .2s}
+.play.played{border-color:color-mix(in srgb,var(--good) 55%,var(--line))}
+/* example buttons that unlock the exercises: outlined = still to hear, filled green with a tick = heard */
+.play.gated{width:42px;height:42px;border:2px solid var(--accent)}
+.play.gated.heard{background:var(--good);border-color:var(--good);color:var(--good-ink)}
+.play.gated.heard::after{content:"";position:absolute;right:-4px;bottom:-4px;width:17px;height:17px;border-radius:50%;background:var(--surface) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231E8A4C' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E") center/11px no-repeat;border:2px solid var(--good)}
+.play.is-playing{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.play.is-playing svg{display:none}
+.play.is-playing::before{content:"";width:16px;height:14px;background:linear-gradient(currentColor,currentColor) 0 100%/3px 50% no-repeat,linear-gradient(currentColor,currentColor) 50% 100%/3px 100% no-repeat,linear-gradient(currentColor,currentColor) 100% 100%/3px 35% no-repeat}
+.btn.is-playing{border-color:var(--accent);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.play.gated.next{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent)}
+.play.demo{display:inline-grid;width:30px;height:30px;cursor:default}
+.play.demo .icon{width:14px;height:14px}
+.btn.mic{border-color:var(--accent);color:var(--accent)}
+.btn.mic.rec{background:var(--bad);border-color:var(--bad);color:#fff}
+.mic-row{gap:12px}
+.mic-status{min-width:0}
+.dict-hint{font-size:15px;line-height:1.5;background:color-mix(in srgb,var(--hl) 22%,var(--surface));border:1px solid color-mix(in srgb,var(--hl) 60%,transparent);border-radius:12px;padding:12px 14px}
+.dict-hint .small{display:inline-block;margin-top:6px;color:var(--muted)}
+kbd{font-family:var(--f-mono);font-size:13px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 6px;white-space:nowrap}
+@media (prefers-reduced-motion: no-preference){.btn.mic.rec{animation:recpulse 1.2s ease-in-out infinite}@keyframes recpulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--bad) 25%,transparent)}}}
+.code-box{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.code{font-family:var(--f-mono);font-size:18px;letter-spacing:.06em;background:var(--soft);padding:8px 12px;border-radius:10px;user-select:all}
+.heard-count{font-size:13px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums}
+.heard-count.all{color:var(--good)}
+.gate-hint{display:flex;gap:10px;align-items:center;font-size:14px;color:var(--muted);background:var(--soft);border-radius:12px;padding:10px 12px}
+.ex-list li.is-heard .sentence{color:var(--ink)}
+.gate-btn.locked{background:var(--soft);color:var(--muted);border:1px dashed color-mix(in srgb,var(--muted) 60%,transparent);cursor:pointer}
+.gate-btn .gate-dots{display:inline-flex;gap:5px;margin-left:4px}
+.gate-btn .gate-dots i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--muted);transition:background-color .2s,border-color .2s}
+.gate-btn .gate-dots i.on{background:var(--good);border-color:var(--good)}
+@media (prefers-reduced-motion: no-preference){
+  .play.gated.next{animation:ring 1.6s ease-in-out infinite}
+  @keyframes ring{0%,100%{box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 25%,transparent)}50%{box-shadow:0 0 0 8px color-mix(in srgb,var(--accent) 0%,transparent)}}
+  .play.is-playing::before{animation:eq .7s ease-in-out infinite alternate}
+  @keyframes eq{from{background-size:3px 50%,3px 100%,3px 35%}to{background-size:3px 100%,3px 40%,3px 85%}}
+  .play.nudge{animation:nudge .5s ease-in-out 2}
+  @keyframes nudge{0%,100%{transform:none}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+  .gate-btn.unlocked{animation:pop .35s ease-out}
+  @keyframes pop{0%{transform:scale(.97)}60%{transform:scale(1.02)}100%{transform:none}}
+}
+.feedback{border-radius:12px;padding:12px 14px;font-size:15px}
+.feedback.good{background:color-mix(in srgb,var(--good) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--good) 40%,transparent)}
+.feedback.mid{background:color-mix(in srgb,var(--warn) 14%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 40%,transparent)}
+.feedback.bad{background:color-mix(in srgb,var(--bad) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--bad) 40%,transparent)}
+.w-ok{color:var(--good);font-weight:600}
+.w-miss{color:var(--bad);text-decoration:underline wavy;text-underline-offset:4px}
+.rate{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.rate button{flex-direction:column;gap:4px;padding:10px 4px;line-height:1.1}
+.rate small{font-weight:400;font-size:12px;color:var(--muted)}
+.rate .again{border-color:var(--bad)}
+.rate .good-b{border-color:var(--accent)}
+.blank{display:inline-block;min-width:7ch;border-bottom:2px solid var(--accent);color:var(--accent)}
+.phrase-big{font-family:var(--f-display);font-size:30px;font-weight:750;line-height:1.15}
+.steps{display:flex;gap:6px}
+.steps i{height:4px;flex:1;border-radius:4px;background:var(--line)}
+.steps i.on{background:var(--accent)}
+.help{font-size:14px;color:var(--muted);background:var(--soft);border-radius:12px;padding:10px 12px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(76px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+details summary{cursor:pointer;font-weight:600}
+@media (prefers-reduced-motion: no-preference){.card,.today-hero{animation:rise .25s ease both}@keyframes rise{from{transform:translateY(4px)}to{transform:none}}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><span class="dot">chunk</span> studio</div>
+    <div class="who" id="who">US English · B2–C1</div>
+  </header>
+  <main id="app" class="stack"></main>
+</div>
+<div class="tabs" id="tabs"><nav>
+  <button data-tab="home" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M5.6 5.6l2.1 2.1M3 12h3M18 12h3M16.3 7.7l2.1-2.1"/><circle cx="12" cy="14" r="5"/></svg>Сегодня</button>
+  <button data-tab="library"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg>Фразы</button>
+  <button data-tab="settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Настройки</button>
+</nav></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ---------- starter course: 36 business + 24 everyday, examples mark the chunk in [brackets] ---------- */
+const RAW = [
+["s01","b","pv","follow up on","вернуться к вопросу, напомнить, довести до конца","Вы обещали клиенту сообщить сроки поставки к пятнице. Скажите, что вернётесь к этому вопросу.","FOLLOW UP on · follow‿up‿on","Деловое, письма и звонки. Существительное: a follow-up.",["I'll [follow up on] the delivery dates by Friday.","Just [following up on] my email from last Tuesday.","Could you [follow up on] the samples we sent to Taipei?"]],
+["s02","b","pv","push back on","возражать, сопротивляться (условиям, срокам)","Отдел закупок клиента возразил против вашей цены. Расскажите об этом коллеге.","push BACK on · push‿back‿on","Нейтрально. Также push back the meeting = перенести на позже.",["Their procurement team [pushed back on] our price.","Don't be afraid to [push back on] unrealistic deadlines.","We [pushed back on] the payment terms and got net 30."]],
+["s03","b","pv","iron out","утрясти, уладить (детали, разногласия)","Контракт почти готов. Скажите, что осталось утрясти несколько деталей.","IRON OUT · iron‿out (iron = «АЙ-ерн»)","Обычно с details, issues, differences, kinks.",["We still need to [iron out] a few details in the contract.","Let's get on a call and [iron out] the differences.","Once we [iron out] the logistics, we can ship."]],
+["s04","b","id","bring (something) to the table","что вы можете предложить, ваш вклад","Спросите команду: что мы предлагаем такого, чего нет у конкурентов?","bring it to the TABLE","Часто в переговорах и при найме.",["What do we [bring to the table] that our competitors don't?","She [brings a lot to the table] as a negotiator.","Think about what each side can [bring to the table]."]],
+["s05","b","co","a non-starter","неприемлемо, даже не обсуждается","Клиент требует отсрочку платежа на 120 дней. Скажите, что это для вас неприемлемо.","a NON-starter","Прямо, но вежливо. Сильнее, чем not ideal.",["A 120-day payment term is [a non-starter] for us.","Exclusivity without minimum volumes is [a non-starter].","If the price goes up again, that's [a non-starter]."]],
+["s06","b","co","a ballpark figure","примерная цифра, ориентировочно","Попросите поставщика назвать примерную цену за 5 кг, без точного расчёта.","a BALLpark figure","Также in the ballpark = примерно в этих пределах.",["Can you give me [a ballpark figure] for five kilos?","I don't need an exact quote, just [a ballpark figure].","[A ballpark figure] would help us plan the budget."]],
+["s07","b","pv","touch base","коротко связаться, свериться","Предложите партнёру созвониться на следующей неделе после испытаний образца.","touch BASE · touch‿base","Американский деловой. touch base with someone.",["Let's [touch base] next week after the trial.","I just wanted to [touch base] about the shipment.","We should [touch base] with the lab before we commit."]],
+["s08","b","pt","get back to (someone)","ответить позже, вернуться с ответом","Нет ответа на технический вопрос. Скажите, что уточните в лаборатории и ответите завтра.","get BACK to you · get‿back = «гедбэк»","Американское t между гласными звучит как быстрое d.",["Let me check with the lab and [get back to you] tomorrow.","Thanks for your patience, I'll [get back to you] by noon.","They never [got back to us] about the quote."]],
+["s09","b","id","on the same page","одинаково понимать, быть согласованными","Перед подписанием убедитесь, что вы с клиентом одинаково понимаете спецификацию.","on the SAME PAGE","Очень частое. get on the same page.",["Before we sign, I want to make sure we're [on the same page] about the specs.","Let's get [on the same page] before the investor call.","Are we all [on the same page] here?"]],
+["s10","b","id","move the needle","существенно повлиять на результат","Коллега предлагает скидку 2%. Скажите, что для клиента это ничего не изменит.","move the NEEDLE","Часто в отрицании: won't move the needle.",["A 2% discount won't [move the needle] for them.","We need a product that really [moves the needle] in Korea.","Trade shows haven't [moved the needle] this year."]],
+["s11","b","pv","rule out","исключить (вариант, вероятность)","Клиент спрашивает о задержке на таможне. Скажите, что не можете её исключить.","rule OUT · rule‿out","rule something out / rule out something.",["We can't [rule out] a delay at customs.","Have you [ruled out] contamination in the sample?","Let's not [rule out] air freight just yet."]],
+["s12","b","pv","come up with","придумать, предложить (решение, идею)","Клиент отказался. Скажите команде, что нужно придумать предложение получше.","come UP with · come‿up‿with","Самый частый способ сказать «придумать».",["We need to [come up with] a better offer.","Who [came up with] this pricing model?","Can you [come up with] a plan B by Monday?"]],
+["s13","b","pv","scale up","наращивать масштаб (производство)","Расскажите партнёру, что в следующем году планируете нарастить производство.","scale UP · scale‿up","Противоположное: scale back / scale down.",["We're planning to [scale up] production next year.","It's hard to [scale up] without a second reactor.","Once demand is proven, we'll [scale up] quickly."]],
+["s14","b","pv","run into","столкнуться (с проблемой)","Объясните, что вы столкнулись с проблемами с экспортной лицензией.","run INTO · ran‿into","Также случайно встретить: I ran into Tom.",["We [ran into] some issues with the export license.","If you [run into] any problems, call me directly.","The project [ran into] delays because of the weather."]],
+["s15","b","id","drag one's feet","тянуть время, медлить","Банк медлит с аккредитивом. Пожалуйтесь на это партнёру.","DRAG its FEET","Немного неодобрительное.",["The bank is [dragging its feet] on the letter of credit.","If we [drag our feet], we'll lose the client.","They've been [dragging their feet] for weeks."]],
+["s16","b","id","the ball is in their court","теперь их ход, решение за ними","Вы отправили финальное предложение. Скажите коллеге, что теперь решение за клиентом.","the BALL is in their COURT","Можно your / our / his court.",["We've sent our final offer, so [the ball is in their court] now.","I've done my part, so [the ball is in your court].","Once they reply, [the ball will be in our court]."]],
+["s17","b","pt","meet (someone) halfway","пойти навстречу, найти компромисс","Предложите клиенту разделить расходы на доставку пополам.","meet you HALFway · meet‿you = «мичю»","Классика переговоров.",["Could we [meet you halfway] on the shipping costs?","If you [meet us halfway] on volume, we can lower the price.","They refused to [meet us halfway]."]],
+["s18","b","pv","walk (someone) through","пошагово объяснить","Попросите поставщика пошагово объяснить результаты анализа чистоты.","WALK me THROUGH","Вежливая просьба: Could you walk me through…?",["Could you [walk me through] the purity test results?","Let me [walk you through] our pricing.","She [walked the team through] the new process."]],
+["s19","b","pt","I was wondering if","мягкая вежливая просьба или вопрос","Вы ждёте ответа на предложение. Вежливо спросите, успел ли клиент его посмотреть.","I was WONdering if · was = «вэз»","Прошедшее время делает просьбу мягче.",["[I was wondering if] you'd had a chance to review our proposal.","[I was wondering if] we could move the call to Thursday.","[I was wondering if] you could send the specs again."]],
+["s20","b","pv","sign off on","утвердить, одобрить официально","Скажите, что финансовый директор ещё должен утвердить бюджет.","sign OFF on · sign‿off‿on","Существительное: get sign-off.",["The CFO still needs to [sign off on] the budget.","Has legal [signed off on] the contract?","I can't [sign off on] this without test data."]],
+["s21","b","pv","lay out","изложить по пунктам","Начиная встречу, скажите, что изложите основные варианты.","lay OUT · lay‿out","Существительное layout = компоновка.",["Let me [lay out] the main options.","The report [lays out] the risks clearly.","She [laid out] a three-year plan."]],
+["s22","b","pv","narrow down","сузить выбор","Скажите, что вы сузили выбор до двух поставщиков.","narrow DOWN · narrow‿down","narrow it down to…",["We've [narrowed it down] to two suppliers.","Can you help me [narrow down] the list?","Let's [narrow down] the options before Friday."]],
+["s23","b","id","a tall order","трудная задача, «многого просите»","Клиент хочет поставку за две недели. Скажите, что это очень сложно, но вы попробуете.","a TALL ORder","Мягкий способ сказать «почти невозможно».",["Delivery in two weeks is [a tall order], but we'll try.","Doubling sales this year is [a tall order].","I know it's [a tall order], but can you do it?"]],
+["s24","b","id","cut corners","экономить на качестве, халтурить","Покупатель беспокоится о качестве. Заверьте, что вы никогда не экономите на контроле качества.","cut CORners · cut‿corners","Негативное, часто в отрицании.",["We never [cut corners] on quality control.","Some suppliers [cut corners] to lower the price.","If you [cut corners] now, you'll pay later."]],
+["s25","b","pv","factor in","учесть, заложить в расчёт","Напомните коллеге, что в цену нужно заложить стоимость фрахта.","factor IN · factor‿in","factor something in.",["We need to [factor in] the cost of freight.","Did you [factor in] the exchange rate?","Once you [factor in] taxes, the margin is thin."]],
+["s26","b","pv","back out of","отказаться, выйти (из сделки)","Расскажите, что покупатель отказался от сделки в последний момент.","back OUT of · back‿out‿of","Без объекта: they backed out.",["They [backed out of] the deal at the last minute.","It's too late to [back out of] the contract.","Our partner [backed out of] the joint venture."]],
+["s27","b","co","(put) on hold","приостановить, отложить","Скажите, что проект приостановлен до получения финансирования.","put it on HOLD","be on hold / put on hold. По телефону: I'll put you on hold.",["The project is [on hold] until the funding comes through.","We had to put the order [on hold].","Let's keep the expansion [on hold] for now."]],
+["s28","b","id","get the ball rolling","запустить процесс, начать","Предложите клиенту начать с пробного заказа.","get the BALL ROLLing","Также start the ball rolling.",["Let's [get the ball rolling] with a trial order.","Who's going to [get the ball rolling]?","A signed NDA will [get the ball rolling]."]],
+["s29","b","pt","keep (someone) in the loop","держать в курсе","Попросите коллегу держать вас в курсе переговоров.","keep me in the LOOP","out of the loop = не в курсе.",["Please [keep me in the loop] on the negotiations.","I'll [keep you in the loop] as things develop.","Sorry, I was [out of the loop] last week."]],
+["s30","b","id","hit the ground running","сразу включиться на полную","Похвалите нового менеджера: он сразу включился в работу.","hit the GROUND RUNning","Про новых сотрудников и запуск проектов.",["Our new manager [hit the ground running].","We want a partner who can [hit the ground running].","If the samples arrive early, we can [hit the ground running]."]],
+["s31","b","co","a win-win","взаимовыгодно","Скажите, что эта договорённость выгодна обеим сторонам.","a WIN-WIN","a win-win situation / deal.",["This arrangement is [a win-win] for both sides.","Let's find [a win-win] here.","Lower freight and faster delivery: it's [a win-win]."]],
+["s32","b","pv","fall through","сорваться (о сделке, планах)","Сообщите, что сделка сорвалась из-за финансирования.","fall THROUGH · fall‿through","О планах, сделках, договорённостях.",["The deal [fell through] because of financing.","If this order [falls through], we have a backup buyer.","Our travel plans [fell through] at the last minute."]],
+["s33","b","id","leave money on the table","упустить выгоду в переговорах","Объясните, что без объёмных скидок вы упускаете выгоду.","leave MONey on the TABle","Типично для переговоров и ценообразования.",["If we don't offer volume pricing, we're [leaving money on the table].","Don't [leave money on the table] in this negotiation.","We [left money on the table] by accepting the first offer."]],
+["s34","b","pv","hold off on","повременить с","Предложите не отгружать товар, пока не поступит оплата.","hold OFF on · hold‿off‿on","hold off on + сущ. / -ing.",["Let's [hold off on] the shipment until payment clears.","We're [holding off on] hiring until Q2.","Can you [hold off on] sending the invoice?"]],
+["s35","b","pt","bring (someone) up to speed","ввести в курс дела","Попросите коллегу ввести вас в курс сделки в Корее.","bring me UP to SPEED","be up to speed = быть в курсе.",["Can you [bring me up to speed] on the Korea deal?","I'll [bring the new manager up to speed].","Are you [up to speed] on the latest specs?"]],
+["s36","b","pt","Would it be possible to","вежливо: можно ли…","Вежливо спросите, можно ли продлить срок на неделю.","would it be POSSible to · would‿it = «вудит»","Очень вежливо, для писем и переговоров.",["[Would it be possible to] extend the deadline by a week?","[Would it be possible to] get a sample first?","[Would it be possible to] split the shipment?"]],
+["s37","l","co","run errands","заниматься мелкими делами (магазин, почта)","Скажите, что после обеда вам нужно сделать пару дел по городу.","run ERRands","Американское бытовое.",["I need to [run some errands] after lunch.","She's out [running errands].","Saturday mornings are for [running errands]."]],
+["s38","l","pv","catch up","повидаться и обменяться новостями; наверстать","Предложите другу встретиться за кофе на выходных и пообщаться.","catch UP · catch‿up","catch up with someone / catch up on work.",["Let's [catch up] over coffee this weekend.","I need to [catch up on] my email.","It was great to [catch up with] you."]],
+["s39","l","pv","figure out","разобраться, понять","Скажите, что не можете понять, как работает этот прибор.","figure OUT · «ФИГ-йер аут»","Одно из самых частых в американской речи.",["I can't [figure out] how this thing works.","We'll [figure it out] together.","Did you [figure out] what went wrong?"]],
+["s40","l","pv","hang out","проводить время, отдыхать вместе","Расскажите, что все выходные вы просто провели дома.","hang OUT · hung‿out","Неформально.",["We just [hung out] at home all weekend.","Do you want to [hang out] later?","The kids love to [hang out] at the pool."]],
+["s41","l","id","a piece of cake","проще простого","Друг волнуется перед экзаменом на права. Скажите, что это проще простого.","a PIECE of CAKE · of = «ə»","of редуцируется: «пис-ə-кейк».",["Don't worry, the test is [a piece of cake].","Setting it up was [a piece of cake].","For her, cooking for ten is [a piece of cake]."]],
+["s42","l","id","sleep on it","отложить решение до утра","Друг торопится с решением. Посоветуйте подумать до завтра.","SLEEP on it · sleep‿on‿it","Работает и в деловом: Let me sleep on it.",["Don't decide now, [sleep on it].","Let me [sleep on it] and call you tomorrow.","I [slept on it] and changed my mind."]],
+["s43","l","id","call it a day","закончить на сегодня","Вы оба устали. Предложите закончить на сегодня.","CALL it a DAY · call‿it‿a","Также в офисе.",["We're tired, let's [call it a day].","After ten hours, I [called it a day].","It's late, so I'm going to [call it a day]."]],
+["s44","l","id","under the weather","неважно себя чувствовать","Скажите, что сегодня вы неважно себя чувствуете.","UNder the WEATHer","Мягко, без подробностей.",["I'm feeling a bit [under the weather] today.","She's been [under the weather] all week.","If you're [under the weather], stay home."]],
+["s45","l","pv","look forward to","ждать с нетерпением","Скажите, что вы очень ждёте поездки.","look FORward to","После to — существительное или -ing.",["I'm really [looking forward to] the trip.","We [look forward to] seeing you.","I'm not [looking forward to] the flight."]],
+["s46","l","pv","pick up","забрать, заехать за; подхватить (навык)","Попросите забрать детей в пять.","pick UP · pick‿up","Забрать, выучить, взять трубку.",["Can you [pick up] the kids at five?","I [picked up] some Spanish in Mexico.","Could you [pick up] milk on the way home?"]],
+["s47","l","pv","put off","откладывать (неприятное)","Скажите другу, чтобы перестал откладывать поход к стоматологу.","put OFF · put‿off = «пудоф»","put off + -ing.",["Stop [putting off] the dentist.","I keep [putting off] cleaning the garage.","We [put off] the trip until spring."]],
+["s48","l","pv","end up","в итоге оказаться","Расскажите, что в итоге вы остались ещё на одну ночь.","end UP · end‿up","end up + -ing / + место.",["We [ended up] staying an extra night.","You'll [end up] paying more if you wait.","How did you [end up] in Singapore?"]],
+["s49","l","id","hit the road","отправиться в путь","Предложите выезжать, пока не начались пробки.","hit the ROAD","Неформально.",["We should [hit the road] before traffic gets bad.","Time to [hit the road].","They [hit the road] at six a.m."]],
+["s50","l","co","no big deal","ничего страшного, пустяки","Друг извиняется за опоздание. Скажите, что ничего страшного.","no BIG DEAL","Также: It's not a big deal.",["Don't worry, it's [no big deal].","Missing one class is [no big deal].","It's [not a big deal], really."]],
+["s51","l","pv","come across","наткнуться, случайно найти","Расскажите, что наткнулись на отличную статью на эту тему.","come aCROSS · came‿across","Также «производить впечатление»: He comes across as shy.",["I [came across] a great article about this.","If you [come across] a good recipe, send it to me.","She [comes across] as very confident."]],
+["s52","l","id","get the hang of","освоиться, набить руку","Подбодрите: через неделю он освоится с новым телефоном.","get the HANG of it","get the hang of it / of + -ing.",["You'll [get the hang of] it in a week.","I'm finally [getting the hang of] this camera.","It takes time to [get the hang of] driving here."]],
+["s53","l","id","on the fence","колебаться, не решить","Скажите, что всё ещё колеблетесь насчёт покупки новой машины.","on the FENCE","sit on the fence = не занимать позицию.",["I'm still [on the fence] about buying a new car.","Half the team is [on the fence] about the move.","If you're [on the fence], wait for the sale."]],
+["s54","l","id","make up one's mind","принять решение, определиться","Спросите друга, определился ли он уже.","make up your MIND","I can't make up my mind.",["Have you [made up your mind] yet?","I can't [make up my mind] about the color.","She [made up her mind] to move to Canada."]],
+["s55","l","pv","cut back on","сократить (траты, потребление)","Скажите, что стараетесь реже ходить по ресторанам.","cut BACK on · cut‿back‿on","Про траты, кофе, экранное время.",["I'm trying to [cut back on] eating out.","We need to [cut back on] spending this month.","He [cut back on] coffee and sleeps better."]],
+["s56","l","id","a long shot","маловероятно, но попробовать","Вы звоните в популярный ресторан без брони. Скажите, что шансов мало, но вдруг есть столик.","a LONG SHOT","It's a long shot, but…",["It's [a long shot], but maybe they have a table.","Winning the bid is [a long shot].","[A long shot], I know, but worth asking."]],
+["s57","l","pv","turn down","отклонить, отказать; убавить","Расскажите, что она отклонила приглашение.","turn DOWN · turn‿down","turn down the volume = убавить громкость.",["She [turned down] the invitation.","Can you [turn down] the music a little?","I had to [turn down] the job offer."]],
+["s58","l","id","go the extra mile","сделать больше, чем требуется","Похвалите персонал отеля: они сделали больше, чем требовалось.","go the EXtra MILE","Также в бизнесе про сервис.",["The hotel staff really [went the extra mile].","Good suppliers [go the extra mile] for their clients.","Thanks for [going the extra mile] on this."]],
+["s59","l","id","break the ice","разрядить обстановку, начать общение","Скажите, что хорошая шутка помогает разрядить обстановку.","break the ICE","icebreaker = вопрос или игра для знакомства.",["A good joke helps [break the ice].","He [broke the ice] by asking about her trip.","Small talk is a way to [break the ice]."]],
+["s60","l","pt","I could use (a)","мне бы не помешал(о)…","Скажите, что вам бы не помешал отпуск.","I could USE a · could = «кəд»","Также: I could use some help.",["[I could use a] vacation.","[I could use some] help with these boxes.","You look like you [could use a] coffee."]]
+];
+/* Russian translations of the three examples, in the same order as ex */
+const EXRU={
+s01:["Я уточню сроки поставки до пятницы.","Хотел напомнить о своём письме с прошлого вторника.","Можете узнать, что с образцами, которые мы отправили в Тайбэй?"],
+s02:["Отдел закупок возразил против нашей цены.","Не бойтесь возражать против нереальных сроков.","Мы оспорили условия оплаты и добились отсрочки в 30 дней."],
+s03:["Нам ещё нужно утрясти несколько деталей в контракте.","Давайте созвонимся и уладим разногласия.","Как только решим вопросы с логистикой, сможем отгружать."],
+s04:["Что мы предлагаем такого, чего нет у конкурентов?","Как переговорщик она может дать очень многое.","Подумайте, что каждая сторона может предложить."],
+s05:["Отсрочка платежа на 120 дней для нас неприемлема.","Эксклюзив без минимальных объёмов даже не обсуждается.","Если цена снова вырастет, это неприемлемо."],
+s06:["Можете назвать примерную цену за пять килограммов?","Мне не нужно точное предложение, только примерная цифра.","Ориентировочная цифра помогла бы нам спланировать бюджет."],
+s07:["Давайте созвонимся на следующей неделе после испытаний.","Хотел коротко свериться по поводу отгрузки.","Нужно связаться с лабораторией, прежде чем брать обязательства."],
+s08:["Я уточню в лаборатории и отвечу вам завтра.","Спасибо за терпение, я отвечу вам до полудня.","Они так и не ответили нам по поводу цены."],
+s09:["Перед подписанием хочу убедиться, что мы одинаково понимаем спецификацию.","Давайте согласуем позиции перед звонком с инвестором.","Мы все одинаково это понимаем?"],
+s10:["Скидка в 2% для них ничего не изменит.","Нам нужен продукт, который реально изменит ситуацию в Корее.","Выставки в этом году не дали заметного результата."],
+s11:["Мы не можем исключить задержку на таможне.","Вы исключили загрязнение образца?","Давайте пока не будем исключать авиадоставку."],
+s12:["Нам нужно придумать предложение получше.","Кто придумал эту модель ценообразования?","Можете подготовить запасной план к понедельнику?"],
+s13:["В следующем году мы планируем нарастить производство.","Без второго реактора сложно увеличить масштаб.","Как только спрос подтвердится, мы быстро нарастим объёмы."],
+s14:["Мы столкнулись с проблемами с экспортной лицензией.","Если возникнут проблемы, звоните мне напрямую.","Проект столкнулся с задержками из-за погоды."],
+s15:["Банк тянет с аккредитивом.","Если будем медлить, потеряем клиента.","Они тянут уже несколько недель."],
+s16:["Мы отправили финальное предложение, так что теперь решение за ними.","Я свою часть сделал, теперь ход за вами.","Когда они ответят, ход будет за нами."],
+s17:["Можем пойти вам навстречу и разделить расходы на доставку?","Если пойдёте нам навстречу по объёму, мы снизим цену.","Они отказались идти нам навстречу."],
+s18:["Можете пошагово объяснить результаты анализа на чистоту?","Давайте я по шагам объясню вам наше ценообразование.","Она подробно провела команду по новому процессу."],
+s19:["Хотел узнать, удалось ли вам посмотреть наше предложение.","Можно ли перенести звонок на четверг?","Не могли бы вы ещё раз прислать спецификацию?"],
+s20:["Финансовый директор ещё должен утвердить бюджет.","Юристы одобрили контракт?","Я не могу это утвердить без данных испытаний."],
+s21:["Давайте я изложу основные варианты.","В отчёте чётко изложены риски.","Она представила трёхлетний план."],
+s22:["Мы сузили выбор до двух поставщиков.","Поможете сократить список?","Давайте сузим варианты до пятницы."],
+s23:["Поставка за две недели — это очень сложно, но мы попробуем.","Удвоить продажи в этом году — трудная задача.","Понимаю, что прошу многого, но вы сможете?"],
+s24:["Мы никогда не экономим на контроле качества.","Некоторые поставщики халтурят, чтобы снизить цену.","Если сэкономите на качестве сейчас, заплатите потом."],
+s25:["Нужно учесть стоимость фрахта.","Вы учли обменный курс?","С учётом налогов маржа совсем небольшая."],
+s26:["Они отказались от сделки в последний момент.","Отказываться от контракта уже поздно.","Наш партнёр вышел из совместного предприятия."],
+s27:["Проект приостановлен до получения финансирования.","Нам пришлось приостановить заказ.","Давайте пока отложим расширение."],
+s28:["Давайте начнём с пробного заказа.","Кто запустит процесс?","Подписанное NDA даст старт процессу."],
+s29:["Пожалуйста, держите меня в курсе переговоров.","Буду держать вас в курсе по мере развития событий.","Извините, на прошлой неделе я был не в курсе."],
+s30:["Наш новый менеджер сразу включился в работу.","Нам нужен партнёр, который сразу начнёт работать в полную силу.","Если образцы придут раньше, мы сможем сразу приступить."],
+s31:["Эта договорённость выгодна обеим сторонам.","Давайте найдём взаимовыгодный вариант.","Дешевле фрахт и быстрее доставка — выигрывают все."],
+s32:["Сделка сорвалась из-за финансирования.","Если этот заказ сорвётся, у нас есть запасной покупатель.","Наши планы на поездку сорвались в последний момент."],
+s33:["Если не предложим скидки за объём, мы упустим выгоду.","Не упускайте выгоду в этих переговорах.","Мы упустили выгоду, приняв первое же предложение."],
+s34:["Давайте повременим с отгрузкой, пока не пройдёт оплата.","Мы откладываем наём до второго квартала.","Можете пока не отправлять счёт?"],
+s35:["Можете ввести меня в курс сделки в Корее?","Я введу нового менеджера в курс дела.","Вы в курсе последней спецификации?"],
+s36:["Можно ли продлить срок на неделю?","Можно сначала получить образец?","Можно ли разделить отгрузку на части?"],
+s37:["После обеда мне нужно сделать кое-какие дела.","Она уехала по делам.","Субботнее утро — время для бытовых дел."],
+s38:["Давайте встретимся за кофе на выходных и поболтаем.","Мне нужно разобрать накопившуюся почту.","Было здорово повидаться и пообщаться."],
+s39:["Не могу понять, как работает эта штука.","Мы вместе разберёмся.","Вы поняли, что пошло не так?"],
+s40:["Мы все выходные просто провели дома.","Хочешь потом встретиться?","Дети обожают проводить время у бассейна."],
+s41:["Не волнуйся, тест — проще простого.","Настроить это было проще простого.","Для неё приготовить на десятерых — пара пустяков."],
+s42:["Не решай сейчас, утро вечера мудренее.","Дайте мне подумать до завтра, я вам позвоню.","Я подумал ночь и передумал."],
+s43:["Мы устали, давайте на сегодня закончим.","Через десять часов я закончил на сегодня.","Уже поздно, так что на сегодня я заканчиваю."],
+s44:["Сегодня я немного приболел.","Она всю неделю неважно себя чувствует.","Если вам нездоровится, оставайтесь дома."],
+s45:["Я очень жду эту поездку.","Ждём встречи с вами.","Перелёт меня не радует."],
+s46:["Можешь забрать детей в пять?","Я немного нахватался испанского в Мексике.","Можешь купить молоко по дороге домой?"],
+s47:["Хватит откладывать поход к стоматологу.","Я всё откладываю уборку гаража.","Мы отложили поездку до весны."],
+s48:["В итоге мы остались ещё на одну ночь.","Если будете ждать, в итоге заплатите больше.","Как вы оказались в Сингапуре?"],
+s49:["Надо выезжать, пока не начались пробки.","Пора в путь.","Они выехали в шесть утра."],
+s50:["Не переживай, ничего страшного.","Пропустить одно занятие — не беда.","Правда, ничего страшного."],
+s51:["Я наткнулся на отличную статью об этом.","Если попадётся хороший рецепт, пришли мне.","Она производит впечатление очень уверенного человека."],
+s52:["Через неделю освоишься.","Я наконец-то освоился с этой камерой.","Нужно время, чтобы привыкнуть водить здесь."],
+s53:["Я всё ещё сомневаюсь, покупать ли новую машину.","Половина команды колеблется насчёт переезда.","Если сомневаешься, подожди распродажи."],
+s54:["Ты уже решил?","Не могу определиться с цветом.","Она решила переехать в Канаду."],
+s55:["Стараюсь реже есть вне дома.","В этом месяце нужно сократить расходы.","Он стал меньше пить кофе и лучше спит."],
+s56:["Шансов мало, но вдруг у них есть столик.","Выиграть тендер — маловероятно.","Знаю, шансов мало, но спросить стоит."],
+s57:["Она отклонила приглашение.","Можешь сделать музыку чуть тише?","Мне пришлось отказаться от предложения о работе."],
+s58:["Персонал отеля сделал больше, чем требовалось.","Хорошие поставщики стараются для клиентов сверх обязательного.","Спасибо, что сделали больше, чем требовалось."],
+s59:["Хорошая шутка помогает разрядить обстановку.","Он начал разговор, спросив о её поездке.","Светская беседа помогает растопить лёд."],
+s60:["Мне бы не помешал отпуск.","Мне бы не помешала помощь с этими коробками.","Похоже, тебе не помешал бы кофе."]
+};
+const trOf=(p,i)=>(p&&Array.isArray(p.exru)&&p.exru[i])||"";
+function toObj(r){return {id:r[0],cat:r[1],type:r[2],en:r[3],ru:r[4],sit:r[5],stress:r[6],note:r[7],ex:r[8],exru:EXRU[r[0]]||[],starter:true}}
+const STARTER=(()=>{const b=RAW.filter(r=>r[1]==="b").map(toObj),l=RAW.filter(r=>r[1]==="l").map(toObj),out=[];
+  while(b.length||l.length){out.push(...b.splice(0,3),...l.splice(0,2))}return out})();
+const TYPE={pv:"фразовый глагол",id:"идиома",co:"коллокация",pt:"речевой шаблон"};
+const MONTH_GOAL=150;
+
+/* ---------- helpers ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const hl=ex=>esc(ex).replace(/\[(.+?)\]/g,"<mark>$1</mark>");
+const plain=ex=>String(ex).replace(/[\[\]]/g,"");
+const chunkOf=ex=>{const m=String(ex).match(/\[(.+?)\]/);return m?m[1]:""};
+const norm=s=>String(s).toLowerCase().replace(/[’‘`]/g,"'").replace(/[-–—]/g," ").replace(/[^a-z0-9' ]/g," ").replace(/\s+/g," ").trim();
+const words=s=>norm(s).split(" ").filter(Boolean);
+const pad=n=>String(n).padStart(2,"0");
+const dayKey=d=>d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+const today=()=>dayKey(new Date());
+const addDays=(k,n)=>{const d=new Date(k+"T12:00:00");d.setDate(d.getDate()+n);return dayKey(d)};
+const diffDays=(a,b)=>Math.round((new Date(a+"T12:00:00")-new Date(b+"T12:00:00"))/864e5);
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>t.hidden=true,2600)}
+const ICON={
+ play:'<svg class="icon" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg>',
+ mic:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>',
+ lock:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+ next:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+ slow:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M7 6v12M12 6l7 6-7 6z"/></svg>',
+ back:'<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>'
+};
+
+/* ---------- speech (US voice) ---------- */
+let voices=[];
+function loadVoices(){try{voices=speechSynthesis.getVoices().filter(v=>(v.lang||"").replace("_","-").toLowerCase().startsWith("en-us"))}catch(e){voices=[]}}
+if("speechSynthesis" in window){loadVoices();speechSynthesis.onvoiceschanged=()=>{loadVoices();if(view==="settings")render()}}
+function pickVoice(){if(!voices.length)return null;const want=S.meta.voice;const v=voices.find(v=>v.name===want);if(v)return v;
+  const pref=["Samantha","Google US English","Aaron","Nicky","Alex","Allison","Ava","Microsoft Aria","Microsoft Jenny"];
+  for(const p of pref){const f=voices.find(v=>v.name.includes(p));if(f)return f}return voices[0]}
+/* recorded US-English audio for the starter course; the system voice is only a fallback */
+const AUD={};
+STARTER.forEach(p=>{AUD[norm(p.en)]=`audio/${p.id}_p.mp3`;p.ex.forEach((e,i)=>{AUD[norm(plain(e))]=`audio/${p.id}_${i}.mp3`})});
+AUD[norm("Let's touch base next week and iron out the details.")]="audio/demo.mp3";
+let player=null,playToken=0;
+/* cb: {onend, onfail}; only the latest call reports back, an interrupted clip reports nothing */
+function speak(text,slow,cb){
+  cb=cb||{};const tok=++playToken;const live=()=>tok===playToken;
+  const done=()=>{if(live()&&cb.onend)cb.onend()};
+  const fail=()=>{if(live()&&cb.onfail)cb.onfail()};
+  const src=AUD[norm(plain(text))];const rate=(slow?0.7:1)*(S.meta.rate||1);
+  try{if("speechSynthesis" in window&&(speechSynthesis.speaking||speechSynthesis.pending))speechSynthesis.cancel()}catch(e){}
+  if(src){try{
+    if(!player)player=new Audio();
+    player.onended=null;player.onerror=null;player.pause();
+    player.defaultPlaybackRate=rate;player.src=src;player.playbackRate=rate;
+    try{player.preservesPitch=true;player.webkitPreservesPitch=true}catch(e){}
+    player.onended=done;
+    player.onerror=()=>{if(live())systemSpeak(text,rate,done,fail)};
+    const pr=player.play();if(pr&&pr.catch)pr.catch(()=>{if(live())systemSpeak(text,rate,done,fail)});return}catch(e){}}
+  systemSpeak(text,rate,done,fail);
+}
+function stopSpeech(){playToken++;try{player&&player.pause()}catch(e){}try{speechSynthesis.cancel()}catch(e){}}
+function systemSpeak(text,rate,done,fail){
+  done=done||(()=>{});fail=fail||(()=>{});
+  if(!("speechSynthesis" in window)){fail();return}
+  try{const u=new SpeechSynthesisUtterance(plain(text));u.lang="en-US";const v=pickVoice();if(v)u.voice=v;u.rate=rate;
+    let settled=false;u.onend=()=>{if(!settled){settled=true;done()}};
+    u.onerror=e=>{if(settled)return;settled=true;if(e&&(e.error==="interrupted"||e.error==="canceled"))return;fail()};
+    setTimeout(()=>{try{speechSynthesis.speak(u)}catch(e){settled=true;fail()}},60)}catch(e){fail()}
+}
+
+/* ---------- matching ---------- */
+const STOP=new Set(["someone","something","sb","sth","a","an","the","to","it","one's"]);
+const IRREG={run:["ran"],come:["came"],fall:["fell"],hold:["held"],get:["got","gotten"],go:["went","gone"],hang:["hung"],break:["broke","broken"],make:["made"],take:["took","taken"],sleep:["slept"],bring:["brought"],lay:["laid"],meet:["met"],catch:["caught"],keep:["kept"],leave:["left"],is:["are","was","were","be","'s"],be:["is","are","was","were","been","am"]};
+function keyTokens(en){return words(String(en).replace(/\(.*?\)/g," ")).filter(w=>!STOP.has(w))}
+function tokMatch(t,uw){return uw.some(w=>w===t||(IRREG[t]||[]).includes(w)||(t.length>=2&&w.startsWith(t)&&w.length<=t.length+4)||(t.length>=5&&w.startsWith(t.slice(0,-1))))}
+function lev(a,b){const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i]);for(let j=1;j<=n;j++)d[0][j]=j;
+  for(let i=1;i<=m;i++)for(let j=1;j<=n;j++)d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1));return d[m][n]}
+function align(target,said){const a=words(target),b=words(said),m=a.length,n=b.length;
+  const dp=Array.from({length:m+1},()=>new Array(n+1).fill(0));
+  for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)dp[i][j]=(a[i]===b[j]||(a[i].length>3&&lev(a[i],b[j])<=1))?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+  const ok=new Array(m).fill(false);let i=0,j=0;
+  while(i<m&&j<n){if(a[i]===b[j]||(a[i].length>3&&lev(a[i],b[j])<=1)){ok[i]=true;i++;j++}else if(dp[i+1][j]>=dp[i][j+1])i++;else j++}
+  return {ok,score:m?ok.filter(Boolean).length/m:0}}
+
+/* ---------- storage: claude.ai db per person, browser storage as fallback ---------- */
+const LKEY="chunkstudio.v1";
+const S={cards:{},meta:{perDay:6,rate:1,voice:"",streak:0,lastDay:"",days:{}},remote:false,col:null,phrasesRemote:[]};
+try{const raw=localStorage.getItem(LKEY);if(raw){const o=JSON.parse(raw);S.cards=o.cards||{};S.meta=Object.assign(S.meta,o.meta||{})}}catch(e){}
+function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify({cards:S.cards,meta:S.meta}))}catch(e){}}
+const bucketOf=id=>{let h=0;for(const c of id)h=(h*31+c.charCodeAt(0))>>>0;return "b"+(h%16).toString(16)};
+const pending={};const chains={};
+function queueWrite(docId){if(!S.remote)return;clearTimeout(pending[docId]);pending[docId]=setTimeout(()=>{
+  const data=docId==="meta"?{...S.meta}:Object.fromEntries(Object.entries(S.cards).filter(([k])=>bucketOf(k)===docId));
+  chains[docId]=(chains[docId]||Promise.resolve()).then(()=>S.col.doc(docId).set(data)).catch(e=>{console.warn("sync",e);setSync("Синхронизация не удалась, прогресс сохранён на устройстве")})},700)}
+function saveCard(id){S.cards[id].t=Date.now();saveLocal();queueWrite(bucketOf(id))}
+function saveMeta(){saveLocal();queueWrite("meta")}
+let syncMsg="Прогресс хранится на этом устройстве.";
+function setSync(m){syncMsg=m;if(view==="settings")render()}
+
+/* Sync: Firestore documents under progress/<code>/docs, signed in anonymously.
+   The code is the private key of a learner's progress; entering it on another device joins that progress. */
+const CKEY="chunkstudio.code";
+const CODE_ABC="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function newCode(){const a=new Uint32Array(16);crypto.getRandomValues(a);let c="";for(let i=0;i<16;i++){c+=CODE_ABC[a[i]%32];if(i%4===3&&i<15)c+="-"}return c}
+function cleanCode(x){const t=String(x||"").toUpperCase().replace(/[^A-Z0-9]/g,"");if(t.length!==16||[...t].some(ch=>!CODE_ABC.includes(ch)))return "";return t.match(/.{4}/g).join("-")}
+function getCode(){try{return localStorage.getItem(CKEY)||""}catch(e){return ""}}
+function setCode(c){try{localStorage.setItem(CKEY,c)}catch(e){}}
+let fb=null,syncOn=false,visHooked=false;
+function loadScript(src){return new Promise((ok,no)=>{const el=document.createElement("script");el.src=src;el.onload=ok;el.onerror=no;document.head.appendChild(el)})}
+async function syncInit(){
+  const cfg=window.FIREBASE_CONFIG;
+  if(!cfg||!cfg.apiKey){setSync("Синхронизация между устройствами ещё не настроена. Прогресс хранится на этом устройстве.");return}
+  if(!navigator.onLine){setSync("Нет интернета. Прогресс сохраняется на устройстве и синхронизируется, когда сеть появится.");window.addEventListener("online",syncInit,{once:true});return}
+  try{
+    const V="10.12.2",B="https://www.gstatic.com/firebasejs/"+V+"/";
+    if(!window.firebase){await loadScript(B+"firebase-app-compat.js");await loadScript(B+"firebase-auth-compat.js");await loadScript(B+"firebase-firestore-compat.js")}
+    if(!fb){const app=firebase.apps.length?firebase.app():firebase.initializeApp(cfg);fb={auth:app.auth(),db:app.firestore()}}
+    if(!fb.auth.currentUser)await fb.auth.signInAnonymously();
+    let code=getCode();if(!code){code=newCode();setCode(code)}
+    await attach(code);
+    if(!visHooked){visHooked=true;document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&syncOn)pull().catch(()=>{})})}
+  }catch(e){console.warn("sync",e);setSync("Не удалось подключить синхронизацию. Прогресс хранится на этом устройстве.")}
+}
+async function attach(code){S.col=fb.db.collection("progress").doc(code).collection("docs");S.remote=false;await pull();syncOn=true;S.remote=true;
+  Object.keys(S.cards).map(bucketOf).filter((v,i,a)=>a.indexOf(v)===i).forEach(queueWrite);queueWrite("meta");
+  setSync("Прогресс синхронизируется по вашему коду. Введите этот код на другом устройстве, чтобы продолжить там.")}
+async function pull(){
+  const snap=await S.col.get();let remoteMeta=null,changed=false;
+  for(const d of snap.docs){const v=d.data()||{};if(d.id==="meta")remoteMeta=v;else for(const [k,c] of Object.entries(v)){if(!S.cards[k]||(c.t||0)>(S.cards[k].t||0)){S.cards[k]=c;changed=true}}}
+  if(remoteMeta){const days={...(S.meta.days||{})};for(const [k,v] of Object.entries(remoteMeta.days||{})){const l=days[k]||{n:0,r:0};days[k]={n:Math.max(l.n||0,v.n||0),r:Math.max(l.r||0,v.r||0)}}
+    const useRemote=(remoteMeta.lastDay||"")>=(S.meta.lastDay||"");S.meta=Object.assign({},S.meta,useRemote?remoteMeta:{},{days});changed=true}
+  saveLocal();if(changed&&view!=="session")render();return snap}
+async function joinCode(raw){const code=cleanCode(raw);if(!code){toast("Код состоит из 16 символов, например K7QM-2XPA-9TRB-W4HN");return}
+  if(code===getCode()){toast("Это устройство уже подключено к этому коду");return}
+  if(!fb){toast("Синхронизация недоступна: нет интернета или она не настроена");return}
+  try{const snap=await fb.db.collection("progress").doc(code).collection("docs").get();
+    if(snap.empty){toast("По этому коду прогресс не найден. Проверьте символы.");return}
+    setCode(code);await attach(code);toast("Готово: прогресс объединён с кодом "+code);render()}
+  catch(e){console.warn(e);toast("Не удалось подключиться. Проверьте интернет и код.")}}
+
+/* phrase packs published next to the app: packs.json lists phrases/*.json files */
+async function loadPacks(){try{const r=await fetch("packs.json",{cache:"no-cache"});if(!r.ok)return;const idx=await r.json();
+  const out=[];for(const f of (idx.packs||[])){try{const pr=await fetch(f);if(!pr.ok)continue;const arr=await pr.json();
+    for(const p of arr){if(!validPhrase(p)||!p.id)continue;out.push(p);
+      if(p.audio){AUD[norm(p.en)]=`audio/${p.id}_p.mp3`;p.ex.forEach((e,i)=>{AUD[norm(plain(e))]=`audio/${p.id}_${i}.mp3`})}}}catch(e){}}
+  const have=new Set(STARTER.map(p=>p.id));S.phrasesRemote=out.filter(p=>!have.has(p.id));if(view!=="session")render()}catch(e){}}
+
+/* install + offline */
+let installEvt=null;
+window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();installEvt=e;if(view==="home"||view==="settings")render()});
+window.addEventListener("appinstalled",()=>{installEvt=null;toast("Chunk Studio установлен");render()});
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone===true;
+function registerSW(){if("serviceWorker" in navigator&&location.protocol!=="file:"){navigator.serviceWorker.register("sw.js").catch(e=>console.warn("sw",e))}}
+async function doInstall(){if(!installEvt){toast("Откройте меню Chrome ⋮ и выберите «Установить приложение» или «Добавить на главный экран»");return}
+  installEvt.prompt();try{await installEvt.userChoice}catch(e){}installEvt=null;render()}
+function validPhrase(p){return p&&typeof p.en==="string"&&Array.isArray(p.ex)&&p.ex.length>=3&&p.ex.every(e=>/\[.+?\]/.test(e))&&p.sit&&p.ru}
+function allPhrases(){return STARTER.concat(S.phrasesRemote.map(p=>({...p,stress:p.stress||"",note:p.note||"",type:p.type||"co",cat:p.cat==="l"?"l":"b"})))}
+function byId(id){return allPhrases().find(p=>p.id===id)}
+
+/* ---------- spaced repetition ---------- */
+function intervalFor(c,g){const iv=c.iv||1,ef=c.ef||2.5;
+  if(g==="again")return 1;if(g==="hard")return Math.max(1,Math.round(iv*1.2));
+  if(g==="good")return Math.max(iv+1,Math.round(iv*ef));return Math.max(iv+2,Math.round(iv*ef*1.3))}
+function grade(id,g){const c=S.cards[id],t=today();const iv=intervalFor(c,g);
+  c.ef=Math.min(3,Math.max(1.3,(c.ef||2.5)+({again:-.2,hard:-.15,good:0,easy:.15})[g]));
+  if(g==="again")c.lapses=(c.lapses||0)+1;c.iv=iv;c.due=addDays(t,iv);c.reps=(c.reps||0)+1;c.last=t;saveCard(id);bump("r")}
+function introduce(id){const t=today();S.cards[id]={iv:1,ef:2.5,due:addDays(t,1),reps:1,lapses:0,added:t,last:t};saveCard(id);bump("n")}
+function bump(k){const t=today();const d=S.meta.days[t]||(S.meta.days[t]={n:0,r:0});d[k]++;
+  if(S.meta.lastDay!==t){S.meta.streak=(S.meta.lastDay===addDays(t,-1))?(S.meta.streak||0)+1:1;S.meta.lastDay=t}saveMeta()}
+const fmtIv=n=>n===1?"завтра":n<30?n+" дн.":Math.round(n/30)+" мес.";
+function statusOf(id){const c=S.cards[id];if(!c)return "new";return (c.iv||0)>=21?"done":"learn"}
+
+/* ---------- plan for today ---------- */
+function plan(){const t=today(),ps=allPhrases(),ids=new Set(ps.map(p=>p.id));
+  const due=Object.entries(S.cards).filter(([id,c])=>ids.has(id)&&c.due<=t).sort((a,b)=>a[1].due<b[1].due?-1:1).map(([id])=>id);
+  const doneNew=(S.meta.days[t]||{}).n||0;const left=Math.max(0,(S.meta.perDay||6)-doneNew);
+  const fresh=ps.filter(p=>!S.cards[p.id]).slice(0,left).map(p=>p.id);
+  return {due:due.slice(0,60),fresh,doneNew,unseen:ps.filter(p=>!S.cards[p.id]).length}}
+
+/* ---------- views ---------- */
+let view="home",libFilter="all",libQuery="",detailId=null,sess=null;
+function setTab(t){view=t;detailId=null;render();window.scrollTo(0,0)}
+document.querySelectorAll("#tabs button").forEach(b=>b.onclick=()=>{if(sess&&!confirmLeave())return;sess=null;setTab(b.dataset.tab)});
+function confirmLeave(){return true}
+
+function render(){
+  document.querySelectorAll("#tabs button").forEach(b=>b.setAttribute("aria-current",b.dataset.tab===(view==="phrase"?"library":view)?"page":"false"));
+  $("#tabs").hidden=view==="session";
+  const app=$("#app");
+  if(view==="home")app.innerHTML=homeView();
+  else if(view==="library")app.innerHTML=libraryView();
+  else if(view==="phrase")app.innerHTML=phraseView(byId(detailId),true);
+  else if(view==="settings")app.innerHTML=settingsView();
+  else if(view==="session")app.innerHTML=sessionView();
+  wire();
+}
+
+function homeView(){const p=plan(),t=today(),ym=t.slice(0,7);
+  const month=Object.entries(S.meta.days).filter(([k])=>k.startsWith(ym)).reduce((s,[,v])=>s+(v.n||0),0);
+  const learned=Object.keys(S.cards).length,mastered=Object.values(S.cards).filter(c=>(c.iv||0)>=21).length;
+  const streakAlive=S.meta.lastDay===t||S.meta.lastDay===addDays(t,-1);
+  let dots="";for(let i=13;i>=0;i--){const k=addDays(t,-i),d=S.meta.days[k];dots+=`<i class="${d&&(d.n||d.r)?"on":""} ${i===0?"today":""}" title="${k}"></i>`}
+  const total=p.due.length+p.fresh.length;
+  const low=p.unseen<14?`<div class="help">Новых фраз осталось ${p.unseen}. Новый пакет появится после обновления приложения.</div>`:"";
+  return `
+  <section class="today-hero" aria-label="План на сегодня">
+    <div class="eyebrow">Сегодня · ${new Date().toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"})}</div>
+    ${total?`<div class="row" style="justify-content:space-between;align-items:flex-end">
+      <div><div class="big">${p.fresh.length}</div><div class="muted small">новых фраз</div></div>
+      <div><div class="big">${p.due.length}</div><div class="muted small">на повторение</div></div>
+      <div style="text-align:right"><div class="big">${streakAlive?S.meta.streak||0:0}</div><div class="muted small">дней подряд</div></div></div>
+      <button class="btn primary block" data-act="start">Начать тренировку · ~${Math.max(3,Math.round(p.fresh.length*3+p.due.length*.6))} мин</button>`
+    :`<h2>На сегодня всё сделано</h2><p class="muted" style="margin:0">Новые ${p.doneNew} из ${S.meta.perDay} пройдены, повторений не осталось. Завтра придут новые фразы и первые повторения.</p>
+      <button class="btn block" data-act="extra">Ещё ${Math.min(3,p.unseen)} новые фразы сверх плана</button>`}
+  </section>
+  ${low}
+  ${!isStandalone()&&installEvt?`<button class="btn block" data-act="install">Установить Chunk Studio на экран</button>`:""}
+  <section class="card stack" aria-label="Цель месяца">
+    <div class="row" style="justify-content:space-between"><div class="eyebrow">Цель месяца</div><div class="small muted" style="font-variant-numeric:tabular-nums">${month} / ${MONTH_GOAL}</div></div>
+    <div class="bar"><i style="width:${Math.min(100,month/MONTH_GOAL*100)}%"></i></div>
+    <div class="dots" aria-label="Активность за 14 дней">${dots}</div>
+  </section>
+  <div class="stats">
+    <div class="stat"><b>${learned}</b><span>в изучении</span></div>
+    <div class="stat"><b>${mastered}</b><span>закреплено (21+ дн.)</span></div>
+    <div class="stat"><b>${allPhrases().length}</b><span>фраз в курсе</span></div>
+  </div>
+  <details class="card"><summary>Как устроена тренировка</summary>
+    <div class="stack small" style="margin-top:10px">
+    <p style="margin:0">Каждая новая фраза проходит 5 шагов: знакомство с тремя контекстами → произношение вслед за диктором → пропуск в предложении → ситуация на русском, где фразу нужно сказать самому → своё предложение. Повторения приходят по интервалам: завтра, через несколько дней, через недели.</p>
+    <p style="margin:0">Произношение проверяется микрофоном: нажмите «Говорить» и произнесите фразу. Если распознаватель понял все слова, значит, вас поймёт и собеседник.</p>
+    <p style="margin:0">Темп: ${S.meta.perDay} новых в день ≈ ${S.meta.perDay*30} в месяц, ${S.meta.perDay*180} за полгода.</p></div>
+  </details>`}
+
+function libraryView(){const ps=allPhrases();const q=norm(libQuery);
+  const list=ps.filter(p=>{if(libFilter==="b"&&p.cat!=="b")return false;if(libFilter==="l"&&p.cat!=="l")return false;
+    const st=statusOf(p.id);if(libFilter==="new"&&st!=="new")return false;if(libFilter==="learn"&&st==="new")return false;
+    return !q||norm(p.en+" "+p.ru+" "+p.ex.join(" ")).includes(q)});
+  const chip=(k,l)=>`<button class="chip" data-filter="${k}" aria-pressed="${libFilter===k}">${l}</button>`;
+  const lbl={new:"новая",learn:"учу",done:"закреплено"};
+  return `<h1>Фразы</h1>
+  <input type="text" id="libq" placeholder="Поиск по фразам и переводу" value="${esc(libQuery)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+  <div class="chips">${chip("all","Все")}${chip("b","Деловые")}${chip("l","Бытовые")}${chip("learn","В изучении")}${chip("new","Ещё не начаты")}</div>
+  <div class="small muted">${list.length} из ${ps.length}</div>
+  <div class="list">${list.map(p=>{const st=statusOf(p.id),c=S.cards[p.id];
+    return `<button class="item" data-open="${esc(p.id)}"><span class="t"><span class="en">${esc(p.en)}</span><br><span class="ru">${esc(p.ru)}</span></span>
+    <span class="stack" style="gap:4px;align-items:flex-end"><span class="pill ${st}">${lbl[st]}</span>${c?`<span class="small muted">${c.due<=today()?"сегодня":fmtIv(diffDays(c.due,today()))}</span>`:""}</span></button>`}).join("")||`<div class="item muted">Ничего не найдено</div>`}</div>`}
+
+/* gate = Set of heard example indexes while the phrase is introduced in a session; null in the library */
+function exPlay(p,e,i,gate){
+  if(!gate)return `<button class="play" data-say="${esc(e)}" aria-label="Прослушать пример ${i+1}">${ICON.play}</button>`;
+  const heard=gate.has(i);const next=!heard&&[0,1,2].find(k=>!gate.has(k))===i;
+  return `<button class="play gated${heard?" heard":""}${next?" next":""}" data-say="${esc(e)}" data-ex="${i}" aria-label="Пример ${i+1}: ${heard?"прослушан, нажмите, чтобы повторить":"не прослушан, нажмите, чтобы прослушать"}">${ICON.play}</button>`}
+function heardLabel(n,total){return n>=total?"Все примеры прослушаны":`Прослушано ${n} из ${total}`}
+function phraseView(p,withBack,gate){if(!p)return `<p>Фраза не найдена.</p>`;
+  return `${withBack?`<button class="btn ghost" data-act="back" style="align-self:flex-start;padding-left:4px">${ICON.back}Все фразы</button>`:""}
+  <article class="card stack">
+    <div class="row"><span class="pill ${p.cat==="b"?"biz":""}">${p.cat==="b"?"деловое":"бытовое"}</span><span class="pill">${TYPE[p.type]||""}</span></div>
+    <div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="phrase-big">${esc(p.en)}</div><button class="play" data-say="${esc(p.en)}" aria-label="Прослушать">${ICON.play}</button></div>
+    <div style="font-size:18px">${esc(p.ru)}</div>
+    ${p.stress?`<div><span class="stress">${esc(p.stress)}</span></div>`:""}
+    ${p.note?`<div class="muted small">${esc(p.note)}</div>`:""}
+  </article>
+  <section class="card stack" id="examples">
+    <div class="row" style="justify-content:space-between"><div class="eyebrow">Три контекста</div>${gate?`<span class="heard-count${gate.size>=p.ex.length?" all":""}" id="heardCount">${heardLabel(gate.size,p.ex.length)}</span>`:""}</div>
+    ${gate&&gate.size<p.ex.length?`<div class="gate-hint" id="gateHint"><span class="play gated demo" aria-hidden="true">${ICON.play}</span><span>Прослушайте каждый пример до конца. Прослушанные станут зелёными, и откроются упражнения.</span></div>`:""}
+    <ul class="ex-list">${p.ex.map((e,i)=>`<li class="${gate&&gate.has(i)?"is-heard":""}" data-ex-row="${i}">${exPlay(p,e,i,gate)}<span class="ex-body"><span class="sentence">${hl(e)}</span>${trOf(p,i)?`<span class="tr">${esc(trOf(p,i))}</span>`:""}</span></li>`).join("")}</ul>
+  </section>`}
+
+function settingsView(){const seg=(key,vals,fmt)=>`<div class="seg" role="group">${vals.map(v=>`<button data-set="${key}" data-val="${v}" aria-pressed="${S.meta[key]==v}">${fmt?fmt(v):v}</button>`).join("")}</div>`;
+  return `<h1>Настройки</h1>
+  <section class="card stack"><div class="eyebrow">Новых фраз в день</div>${seg("perDay",[5,6,7])}
+    <div class="small muted">≈ ${S.meta.perDay*30} в месяц · ${S.meta.perDay*180} за полгода · ${S.meta.perDay*365} за год</div></section>
+  <section class="card stack"><div class="eyebrow">Озвучка, американский английский</div>
+    <p class="small" style="margin:0">Фразы и примеры стартового курса озвучены заранее: два американских голоса, работают на любом телефоне. Системный голос ниже нужен только для фраз без записи.</p>
+    <div class="eyebrow">Системный голос</div>
+    ${voices.length?`<select id="voice">${voices.map(v=>`<option value="${esc(v.name)}" ${pickVoice()&&pickVoice().name===v.name?"selected":""}>${esc(v.name)}</option>`).join("")}</select>`:`<div class="help">Голоса en-US не найдены. На iPhone: Настройки → Универсальный доступ → Устный контент → Голоса → English (US). На Android: установите Google Text-to-Speech.</div>`}
+    <div class="eyebrow">Скорость речи</div>${seg("rate",[0.8,0.9,1],v=>v===1?"обычная":v)}
+    <button class="btn" data-say="Let's touch base next week and iron out the details.">${ICON.play}Проверить голос</button></section>
+  <section class="card stack"><div class="eyebrow">Микрофон</div>
+    <p class="small" style="margin:0">В упражнениях нажмите «Говорить» и произнесите фразу по-английски. При первом нажатии разрешите доступ к микрофону. Распознавание работает в Chrome и Edge, нужен интернет.</p></section>
+  <section class="card stack" id="sync"><div class="eyebrow">Синхронизация телефон + ПК</div>
+    <p class="small" style="margin:0">${esc(syncMsg)}</p>
+    ${syncOn?`<div class="code-box"><span class="code" id="mycode">${esc(getCode())}</span><button class="btn" data-act="copycode">Копировать</button></div>
+    <p class="small muted" style="margin:0">Этот код — ключ к вашему прогрессу, не публикуйте его. У каждого члена семьи и партнёра свой код, он создаётся автоматически.</p>
+    <label class="eyebrow" for="joincode">Продолжить здесь прогресс с другого устройства</label>
+    <input type="text" id="joincode" placeholder="Код с другого устройства" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <button class="btn" data-act="join">Подключить по коду</button>
+    <p class="small muted" style="margin:0">Прогресс этого устройства объединится с прогрессом по коду, ничего не потеряется.</p>`:""}
+  </section>
+  ${isStandalone()?"":`<section class="card stack"><div class="eyebrow">Приложение на экране</div>
+    <p class="small" style="margin:0">Установите Chunk Studio, чтобы открывать его с иконки, на весь экран и без интернета.</p>
+    <button class="btn primary" data-act="install">Установить приложение</button></section>`}`}
+
+/* ---------- session ---------- */
+function startSession(extra){const p=plan();let fresh=p.fresh;
+  if(extra)fresh=allPhrases().filter(x=>!S.cards[x.id]).slice(0,3).map(x=>x.id);
+  const q=[...p.due.map(id=>({kind:"rev",id})),...fresh.map(id=>({kind:"new",id}))];
+  if(!q.length){toast("На сегодня всё сделано");return}
+  q.forEach(it=>{if(it.kind==="new")it.steps=["intro","shadow","cloze","situation","own"];
+    else{const c=S.cards[it.id];const types=["situation","cloze","shadow"];it.steps=[types[((c.reps||0)+it.id.length)%3],"rate"];it.exi=Math.floor(Math.random()*3)}});
+  sess={q,i:0,step:0,stats:{n:0,r:0,again:0},state:{}};view="session";render();window.scrollTo(0,0)}
+function cur(){return sess.q[sess.i]}
+function nextStep(){stopMic();const it=cur();sess.state={};if(sess.step<it.steps.length-1){sess.step++}else{
+    if(it.kind==="new"){introduce(it.id);sess.stats.n++}
+    sess.i++;sess.step=0}
+  render();window.scrollTo(0,0)}
+function sessionView(){
+  if(sess.i>=sess.q.length){return `<section class="today-hero"><div class="eyebrow">Тренировка завершена</div><h1>Отлично поработали</h1>
+    <p style="margin:0">Новых фраз: <b>${sess.stats.n}</b> · повторено: <b>${sess.stats.r}</b>${sess.stats.again?` · вернутся завтра: <b>${sess.stats.again}</b>`:""}</p>
+    <p class="muted small" style="margin:0">Чтобы фразы перешли в речь, используйте сегодня хотя бы две из них в письме или разговоре.</p>
+    <button class="btn primary block" data-act="home">На главную</button></section>`}
+  const it=cur(),p=byId(it.id),step=it.steps[sess.step];
+  const prog=`<div class="progress"><button class="btn ghost" data-act="quit" aria-label="Выйти из тренировки">${ICON.back}</button><div class="bar"><i style="width:${sess.i/sess.q.length*100}%"></i></div><span class="small muted" style="font-variant-numeric:tabular-nums">${sess.i+1}/${sess.q.length}</span></div>`;
+  const stepsBar=it.kind==="new"?`<div class="steps">${it.steps.map((s,i)=>`<i class="${i<=sess.step?"on":""}"></i>`).join("")}</div>`:"";
+  const label=it.kind==="new"?"Новая фраза":"Повторение";
+  let body="";
+  if(step==="intro"){const g=sess.state.heard||(sess.state.heard=new Set());body=phraseView(p,false,g)+gateControls(p,g)}
+  else if(step==="shadow")body=shadowEx(p,it.kind==="new"?1:it.exi);
+  else if(step==="cloze")body=clozeEx(p,it.kind==="new"?2:it.exi);
+  else if(step==="situation")body=situationEx(p);
+  else if(step==="own")body=ownEx(p);
+  else if(step==="rate")body=rateEx(p);
+  return prog+`<div class="row" style="justify-content:space-between"><span class="eyebrow">${label}</span>${stepsBar?`<div style="flex:1;max-width:160px">${stepsBar}</div>`:""}</div>`+body}
+
+function gateControls(p,g){const n=p.ex.length,open=g.size>=n;
+  return `<div class="stack" style="gap:10px">
+    ${open?"":`<button class="btn block" data-act="playall" id="playAll">${ICON.play}Прослушать все подряд</button>`}
+    <button class="btn block gate-btn${open?" primary":" locked"}" data-act="gate" id="gateBtn" aria-disabled="${open?"false":"true"}">
+      ${open?`К упражнениям${ICON.next}`:`${ICON.lock}<span>Сначала прослушайте примеры</span><span class="gate-dots" aria-hidden="true">${p.ex.map((_,i)=>`<i class="${g.has(i)?"on":""}"></i>`).join("")}</span>`}
+    </button></div>`}
+
+/* updates the intro step in place, so the page does not jump while the person is listening */
+function refreshGate(){
+  if(!sess||view!=="session")return;const it=cur();if(!it||it.steps[sess.step]!=="intro")return;
+  const p=byId(it.id),g=sess.state.heard,n=p.ex.length;
+  document.querySelectorAll("button.play.gated[data-ex]").forEach(b=>{const i=+b.dataset.ex,h=g.has(i);
+    b.classList.toggle("heard",h);b.classList.toggle("next",!h&&[...Array(n).keys()].find(k=>!g.has(k))===i);
+    b.setAttribute("aria-label",`Пример ${i+1}: ${h?"прослушан, нажмите, чтобы повторить":"не прослушан, нажмите, чтобы прослушать"}`);
+    const row=b.closest("li");if(row)row.classList.toggle("is-heard",h)});
+  const c=$("#heardCount");if(c){c.textContent=heardLabel(g.size,n);c.classList.toggle("all",g.size>=n)}
+  if(g.size>=n){const h=$("#gateHint");if(h)h.remove();const pa=$("#playAll");if(pa)pa.remove();
+    const gb=$("#gateBtn");if(gb&&gb.classList.contains("locked")){gb.classList.remove("locked");gb.classList.add("primary","unlocked");gb.setAttribute("aria-disabled","false");gb.innerHTML=`К упражнениям${ICON.next}`;toast("Все примеры прослушаны, упражнения открыты")}}
+  else{const dots=document.querySelectorAll("#gateBtn .gate-dots i");dots.forEach((d,i)=>d.classList.toggle("on",g.has(i)))}
+}
+function markHeard(btn){if(!btn||btn.dataset.ex===undefined||!sess||!sess.state.heard)return;sess.state.heard.add(+btn.dataset.ex);refreshGate()}
+function setPlaying(btn){document.querySelectorAll(".is-playing").forEach(b=>{b.classList.remove("is-playing");b.removeAttribute("aria-busy")});
+  if(btn){btn.classList.add("is-playing");btn.setAttribute("aria-busy","true")}}
+function playBtn(btn,text,slow,after){
+  seqActive=false;setPlaying(btn);
+  speak(text,slow,{onend:()=>{setPlaying(null);btn.classList.add("played");markHeard(btn);after&&after()},
+    onfail:()=>{setPlaying(null);if(btn.dataset.ex!==undefined){markHeard(btn);toast("Звук не воспроизвёлся на этом устройстве. Пример засчитан, прочитайте его вслух.")}else toast("Не удалось воспроизвести звук");after&&after()}});
+}
+let seqActive=false;
+function playAll(){const btns=[...document.querySelectorAll("button.play.gated[data-ex]")];const g=sess.state.heard;
+  const queue=btns.filter(b=>!g.has(+b.dataset.ex));const list=queue.length?queue:btns;let k=0;
+  const step=()=>{if(k>=list.length){seqActive=false;return}const b=list[k++];
+    b.scrollIntoView({block:"nearest",behavior:"smooth"});
+    playBtn(b,b.dataset.say,false,()=>{if(!seqActive)return;setTimeout(()=>{if(seqActive)step()},450)});seqActive=true};
+  step()}
+function nudgeNext(){const g=sess.state.heard;const b=[...document.querySelectorAll("button.play.gated[data-ex]")].find(x=>!g.has(+x.dataset.ex));
+  const left=document.querySelectorAll("button.play.gated[data-ex]").length-g.size;
+  toast(left===1?"Осталось прослушать 1 пример":`Осталось прослушать ${left} примера`);
+  if(b){b.scrollIntoView({block:"center",behavior:"smooth"});b.classList.remove("nudge");void b.offsetWidth;b.classList.add("nudge")}}
+
+/* ---------- microphone: browser speech recognition when the page is allowed it, otherwise the system dictation ---------- */
+const UA=(navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||navigator.userAgent||"";
+const DEV=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)?"mobile":/Mac/i.test(UA)?"mac":/Win/i.test(UA)?"win":"other";
+function dictHintHtml(){
+  if(DEV==="win")return `<b>Включите диктовку Windows.</b> Курсор уже стоит в поле: нажмите <kbd>Win</kbd> + <kbd>H</kbd> и говорите, затем нажмите «Проверить».<br><span class="small">Диктовка слушает на языке ввода. Если текст выходит по-русски, переключитесь на English (US) через <kbd>Win</kbd> + <kbd>Пробел</kbd> и нажмите <kbd>Win</kbd> + <kbd>H</kbd> снова.</span>`;
+  if(DEV==="mac")return `<b>Включите диктовку macOS.</b> Курсор уже стоит в поле: дважды нажмите <kbd>Fn</kbd> (<kbd>🌐</kbd>) или выберите в меню Правка → Начать диктовку, затем говорите.<br><span class="small">Язык диктовки: Системные настройки → Клавиатура → Диктовка → Языки → English (United States).</span>`;
+  if(DEV==="mobile")return `<b>Используйте микрофон клавиатуры.</b> Курсор уже стоит в поле: переключите клавиатуру на English (US) и нажмите на значок микрофона.`;
+  return `<b>Используйте системную диктовку.</b> Курсор уже стоит в поле: включите голосовой ввод вашей системы на английском языке.`}
+function micRow(id){return `<div class="row mic-row"><button class="btn mic" type="button" data-mic="${id}" aria-pressed="false">${ICON.mic}<span>Говорить</span></button><span class="small muted mic-status" id="mstat-${id}" aria-live="polite"></span></div>
+    <div class="dict-hint" id="hint-${id}" hidden>${dictHintHtml()}</div>`}
+let rec=null,recBtn=null;
+function stopMic(){if(rec){try{rec.onend=null;rec.onerror=null;rec.abort()}catch(e){}}rec=null;if(recBtn){recBtn.classList.remove("rec");recBtn.setAttribute("aria-pressed","false");const l=recBtn.querySelector("span");if(l)l.textContent="Говорить"}recBtn=null}
+function showDictHint(id){const h=document.getElementById("hint-"+id);if(h)h.hidden=false;const el=document.getElementById(id);
+  if(el){el.focus();try{const n=el.value.length;el.setSelectionRange(n,n)}catch(e){}}}
+function toggleMic(btn){
+  const id=btn.dataset.mic,el=document.getElementById(id),stat=document.getElementById("mstat-"+id);
+  if(rec&&recBtn===btn){try{rec.stop()}catch(e){stopMic()}return}
+  stopMic();stopSpeech();
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR||!el){showDictHint(id);return}
+  let r;try{r=new SR()}catch(e){showDictHint(id);return}
+  rec=r;recBtn=btn;r.lang="en-US";r.interimResults=true;r.continuous=false;r.maxAlternatives=1;
+  const base=el.value.trim()?el.value.trim()+" ":"";let got=false;
+  r.onstart=()=>{if(rec!==r)return;btn.classList.add("rec");btn.setAttribute("aria-pressed","true");btn.querySelector("span").textContent="Стоп";if(stat)stat.textContent="Слушаю, говорите по-английски"};
+  r.onresult=e=>{if(rec!==r)return;let t="";for(let k=0;k<e.results.length;k++)t+=e.results[k][0].transcript;got=true;el.value=base+t.trim()};
+  r.onerror=e=>{if(rec!==r)return;const code=e&&e.error;stopMic();
+    if(stat)stat.textContent="";
+    if(code==="no-speech"){if(stat)stat.textContent="Ничего не услышал, попробуйте ещё раз";return}
+    if(code==="aborted")return;
+    if(code==="not-allowed"||code==="service-not-allowed")toast("Доступ к микрофону запрещён. Разрешите его в настройках сайта: значок слева от адреса.");
+    if(code==="network")toast("Для распознавания речи нужен интернет");
+    showDictHint(id)};
+  r.onend=()=>{if(rec!==r)return;stopMic();if(got&&id==="said"){doAct("checkShadow");return}if(got){if(stat)stat.textContent="Готово, нажмите «Проверить»"}else{if(stat)stat.textContent="";showDictHint(id)}};
+  /* if the browser never starts listening, fall back to the system dictation */
+  setTimeout(()=>{if(rec===r&&!btn.classList.contains("rec")){stopMic();showDictHint(id)}},2500);
+  try{r.start()}catch(e){stopMic();showDictHint(id)}
+}
+
+function shadowEx(p,i){const e=p.ex[i],st=sess.state;
+  let res="";if(st.checked){const a=align(plain(e),st.said||"");const pct=Math.round(a.score*100);
+    const ws=plain(e).split(/\s+/);const marked=ws.map((w,k)=>`<span class="${a.ok[k]?"w-ok":"w-miss"}">${esc(w)}</span>`).join(" ");
+    res=`<div class="feedback ${pct>=90?"good":pct>=60?"mid":"bad"}"><b>${pct}% слов распознано.</b> ${pct>=90?"Звучит понятно.":pct>=60?"Подчёркнутые слова распознаны неверно, послушайте ещё раз медленно.":"Послушайте медленно и повторите по частям."}<div class="sentence" style="font-size:17px;margin-top:6px">${marked}</div></div>`}
+  return `<section class="card stack"><h2>Повторите вслед за диктором</h2>
+    <div class="stack" style="gap:4px"><div class="sentence">${hl(e)}</div>${trOf(p,i)?`<div class="tr">${esc(trOf(p,i))}</div>`:""}</div>${p.stress?`<div><span class="stress">${esc(p.stress)}</span></div>`:""}
+    <div class="row"><button class="btn" data-say="${esc(e)}">${ICON.play}Слушать</button><button class="btn" data-say-slow="${esc(e)}">${ICON.slow}Медленно</button></div>
+    <div class="help">Послушайте 2–3 раза и повторите вслух вместе с диктором. Затем нажмите «Говорить» и произнесите фразу.</div>
+    <input type="text" id="said" placeholder="Здесь появится то, что вы сказали" value="${esc(st.said||"")}" autocomplete="off" autocapitalize="off" spellcheck="false">
+    ${micRow("said")}
+    ${res}
+    <div class="row">${st.checked?`<button class="btn primary" data-act="${cur().kind==="rev"?"next":"next"}">Дальше</button><button class="btn" data-act="retry">Ещё раз</button>`:`<button class="btn primary" data-act="checkShadow">Проверить</button><button class="btn ghost" data-act="next">Пропустить</button>`}</div></section>`}
+
+function clozeEx(p,i){const e=p.ex[i],ans=chunkOf(e),st=sess.state;
+  const parts=esc(e).split(/\[.+?\]/);
+  let res="";if(st.checked){const u=norm(st.val||""),a=norm(ans);const d=lev(u,a);
+    st.ok=u===a;const close=!st.ok&&d<=Math.max(1,Math.floor(a.length/8));
+    res=`<div class="feedback ${st.ok?"good":close?"mid":"bad"}">${st.ok?"Верно.":close?"Почти: проверьте написание.":"Правильно так:"} <span class="sentence" style="font-size:17px">${hl(e)}</span></div>`}
+  return `<section class="card stack"><h2>Вставьте фразу</h2>
+    <div class="muted small">Значение фразы: ${esc(p.ru)}</div>
+    <div class="stack" style="gap:4px"><div class="sentence">${parts[0]}<span class="blank">${st.checked?esc(ans):"&nbsp;?&nbsp;"}</span>${parts[1]||""}</div>${trOf(p,i)?`<div class="tr">${esc(trOf(p,i))}</div>`:""}</div>
+    <input type="text" id="cloze" placeholder="${st.hint?esc(ans.split(" ").map(w=>w[0]+"…").join(" ")):"Напишите пропущенную часть"}" value="${esc(st.val||"")}" autocomplete="off" autocapitalize="off" spellcheck="false">
+    ${res}
+    <div class="row">${st.checked?`<button class="btn primary" data-act="next">Дальше</button><button class="btn" data-say="${esc(e)}">${ICON.play}Слушать</button>`:`<button class="btn primary" data-act="checkCloze">Проверить</button><button class="btn ghost" data-act="hint">Подсказка</button>`}</div></section>`}
+
+function situationEx(p){const st=sess.state,model=p.ex[0];
+  let res="";if(st.checked){const toks=keyTokens(p.en),uw=words(st.val||"");const hit=toks.filter(t=>tokMatch(t,uw));
+    const ok=toks.length&&hit.length===toks.length;st.ok=ok;
+    res=`<div class="feedback ${ok?"good":hit.length?"mid":"bad"}">${ok?"Целевая фраза использована.":hit.length?"Фраза использована частично. Сравните с образцом.":"Целевой фразы нет. Образец:"}
+      <div class="row" style="margin-top:8px;flex-wrap:nowrap"><button class="play" data-say="${esc(model)}" aria-label="Прослушать образец">${ICON.play}</button><span class="sentence" style="font-size:17px">${hl(model)}</span></div></div>`}
+  return `<section class="card stack"><h2>Скажите по-английски</h2>
+    <div style="font-size:18px">${esc(p.sit)}</div>
+    <div class="muted small">Используйте фразу: ${st.reveal||st.checked?`<b>${esc(p.en)}</b>`:`<button class="chip" data-act="reveal">показать фразу</button>`}</div>
+    <textarea id="sit" placeholder="Нажмите «Говорить» и ответьте вслух или напишите">${esc(st.val||"")}</textarea>
+    ${micRow("sit")}
+    ${res}
+    <div class="row">${st.checked?`<button class="btn primary" data-act="next">Дальше</button>`:`<button class="btn primary" data-act="checkSit">Проверить</button><button class="btn ghost" data-act="next">Пропустить</button>`}</div></section>`}
+
+function ownEx(p){const st=sess.state;
+  let res="";if(st.busy)res=`<div class="help">Проверяю…</div>`;
+  else if(st.ai){const a=st.ai;res=`<div class="feedback ${a.ok?(a.natural>=4?"good":"mid"):"bad"}"><b>${a.ok?(a.natural>=4?"Естественно.":"Понятно, но можно лучше."):"Фраза использована неточно."}</b> ${esc(a.comment||"")}
+    ${a.fixed&&norm(a.fixed)!==norm(st.val||"")?`<div class="row" style="margin-top:8px;flex-wrap:nowrap"><button class="play" data-say="${esc(a.fixed)}" aria-label="Прослушать">${ICON.play}</button><span class="sentence" style="font-size:17px">${esc(a.fixed)}</span></div>`:""}</div>`}
+  else if(st.err)res=`<div class="feedback mid">${esc(st.err)}</div>`;
+  return `<section class="card stack"><h2>Своё предложение</h2>
+    <div>Составьте предложение про свою работу или жизнь с фразой <mark>${esc(p.en)}</mark></div>
+    <textarea id="own" placeholder="Например, про ваших клиентов, поставки или планы на выходные">${esc(st.val||"")}</textarea>
+    ${micRow("own")}
+    ${res}
+    <div class="row"><button class="btn primary" data-act="next">Готово</button></div>
+    <div class="small muted">Скажите предложение вслух и сравните с тремя примерами из карточки: та же форма фразы, тот же предлог?</div></section>`}
+
+function rateEx(p){const c=S.cards[p.id];const b=(g,l,cls)=>`<button class="btn ${cls||""}" data-grade="${g}">${l}<small>${fmtIv(intervalFor(c,g))}</small></button>`;
+  return `<section class="card stack"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div class="phrase-big" style="font-size:24px">${esc(p.en)}</div><button class="play" data-say="${esc(p.en)}" aria-label="Прослушать">${ICON.play}</button></div>
+    <div class="muted">${esc(p.ru)}</div>
+    <h2 style="font-size:17px">Насколько легко было вспомнить?</h2>
+    <div class="rate">${b("again","Забыл","again")}${b("hard","Трудно")}${b("good","Хорошо","good-b")}${b("easy","Легко")}</div></section>`}
+
+/* ---------- events ---------- */
+function wire(){
+  document.querySelectorAll("[data-say]").forEach(b=>b.onclick=()=>playBtn(b,b.dataset.say,false));
+  document.querySelectorAll("[data-mic]").forEach(b=>b.onclick=()=>toggleMic(b));
+  document.querySelectorAll("[data-say-slow]").forEach(b=>b.onclick=()=>playBtn(b,b.dataset.saySlow,true));
+  document.querySelectorAll("[data-open]").forEach(b=>b.onclick=()=>{detailId=b.dataset.open;view="phrase";render();window.scrollTo(0,0)});
+  document.querySelectorAll("[data-filter]").forEach(b=>b.onclick=()=>{libFilter=b.dataset.filter;render()});
+  document.querySelectorAll("[data-set]").forEach(b=>b.onclick=()=>{S.meta[b.dataset.set]=+b.dataset.val;saveMeta();render()});
+  document.querySelectorAll("[data-grade]").forEach(b=>b.onclick=()=>{const it=cur(),g=b.dataset.grade;grade(it.id,g);sess.stats.r++;
+    if(g==="again"){sess.stats.again++;if(!it.requeued)sess.q.push({kind:"rev",id:it.id,steps:["shadow","rate"],exi:(it.exi+1)%3,requeued:true})}
+    nextStep()});
+  const q=$("#libq");if(q){q.oninput=()=>{libQuery=q.value;const pos=q.selectionStart;render();const n=$("#libq");n.focus();try{n.setSelectionRange(pos,pos)}catch(e){}}}
+  const v=$("#voice");if(v)v.onchange=()=>{S.meta.voice=v.value;saveMeta()};
+  const enter=(id,act)=>{const el=$(id);if(el&&el.tagName==="INPUT")el.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();act()}}};
+  enter("#said",()=>doAct("checkShadow"));enter("#cloze",()=>doAct("checkCloze"));
+  document.querySelectorAll("[data-act]").forEach(b=>b.onclick=()=>doAct(b.dataset.act));
+}
+function doAct(a){const st=sess&&sess.state;
+  switch(a){
+    case "start":startSession(false);break;
+    case "extra":startSession(true);break;
+    case "home":sess=null;setTab("home");break;
+    case "quit":stopMic();stopSpeech();seqActive=false;sess=null;setTab("home");break;
+    case "back":setTab("library");break;
+    case "next":stopSpeech();seqActive=false;nextStep();break;
+    case "gate":{const p=byId(cur().id);if((sess.state.heard||new Set()).size>=p.ex.length){stopSpeech();seqActive=false;nextStep()}else nudgeNext();break}
+    case "playall":playAll();break;
+    case "retry":sess.state={};render();break;
+    case "reveal":st.val=($("#sit")||{}).value||"";st.reveal=true;render();break;
+    case "hint":st.val=($("#cloze")||{}).value||"";st.hint=true;render();break;
+    case "checkShadow":st.said=$("#said").value;if(!st.said.trim()){toast("Продиктуйте фразу в поле ввода");return}st.checked=true;render();break;
+    case "checkCloze":st.val=$("#cloze").value;if(!st.val.trim()){toast("Напишите пропущенную часть");return}st.checked=true;render();break;
+    case "checkSit":st.val=$("#sit").value;if(!st.val.trim()){toast("Сначала скажите или напишите ответ");return}st.checked=true;render();break;
+    case "copycode":{const c=getCode();(navigator.clipboard&&navigator.clipboard.writeText?navigator.clipboard.writeText(c):Promise.reject()).then(()=>toast("Код скопирован"),()=>{const r=document.createRange();r.selectNodeContents($("#mycode"));const se=getSelection();se.removeAllRanges();se.addRange(r);toast("Выделите и скопируйте код")});break}
+    case "join":joinCode(($("#joincode")||{}).value);break;
+    case "install":doInstall();break;
+  }}
+
+render();
+syncInit();
+loadPacks();
+registerSW();
+</script>
+</body>
+</html>
+
